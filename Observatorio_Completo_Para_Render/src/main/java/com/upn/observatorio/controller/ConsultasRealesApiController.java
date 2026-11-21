@@ -25,9 +25,9 @@ public class ConsultasRealesApiController {
   String tabla=hom?"public.obs_homicidios_inei":"public.obs_denuncias_policiales";
   List<Object> args=new ArrayList<>();
   StringBuilder where=new StringBuilder(" WHERE anio BETWEEN ? AND ?");args.add(desde);args.add(hasta);
-  if(!departamento.equals("Todos")&&!departamento.isBlank()){where.append(" AND UPPER(departamento)=UPPER(?)");args.add(departamento);}
-  if(!provincia.equals("Todos")&&!provincia.isBlank()){where.append(" AND UPPER(provincia)=UPPER(?)");args.add(provincia);}
-  if(!distrito.equals("Todos")&&!distrito.isBlank()){where.append(" AND UPPER(distrito)=UPPER(?)");args.add(distrito);}
+  if(!departamento.equalsIgnoreCase("Todos")&&!departamento.isBlank()){if(departamento.equalsIgnoreCase("Lima")){where.append(" AND (UPPER(TRIM(departamento)) IN ('LIMA','LIMA METROPOLITANA','REGION LIMA','REGIÓN LIMA','LIMA PROVINCIAS'))");}else{where.append(" AND UPPER(TRIM(departamento))=UPPER(TRIM(?))");args.add(departamento);}}
+  if(!provincia.equals("Todos")&&!provincia.isBlank()){where.append(" AND UPPER(TRIM(provincia))=UPPER(TRIM(?))");args.add(provincia);}
+  if(!distrito.equals("Todos")&&!distrito.isBlank()){where.append(" AND UPPER(TRIM(distrito))=UPPER(TRIM(?))");args.add(distrito);}
   if(!hom){
    if(mes>0){where.append(" AND mes=?");args.add(mes);}
    if(indicador.equals("robos"))where.append(" AND LOWER(modalidad) LIKE '%robo%'");
@@ -37,6 +37,7 @@ public class ConsultasRealesApiController {
   String campo=agrupar.equals("mes")?(hom?"anio":"mes"):agrupar;
   String sql="SELECT "+campo+" AS etiqueta, SUM(cantidad) AS cantidad FROM "+tabla+where+" GROUP BY "+campo+" ORDER BY "+(agrupar.equals("anio")||agrupar.equals("mes")?"etiqueta":"cantidad DESC")+" LIMIT 2000";
   List<Map<String,Object>> filas=db.queryForList(sql,args.toArray());
-  Map<String,Object> out=new LinkedHashMap<>();out.put("filas",filas);out.put("fuente",hom?"INEI/CEIC - homicidios anuales":"SIDPOL - denuncias policiales");out.put("agrupacion",campo);out.put("indicador",indicador);out.put("total",filas.stream().mapToLong(r->((Number)r.get("cantidad")).longValue()).sum());out.put("nota",hom?"Homicidios anuales con desglose territorial disponible; 2025 nacional preliminar no se desagrega por distrito.":"Suma de denuncias registradas según los filtros seleccionados.");return out;
+  Long totalReal=db.queryForObject("SELECT COALESCE(SUM(cantidad),0) FROM "+tabla+where,Long.class,args.toArray());
+  Map<String,Object> out=new LinkedHashMap<>();out.put("filas",filas);out.put("fuente",hom?"INEI/CEIC - homicidios anuales":"SIDPOL - denuncias policiales");out.put("agrupacion",campo);out.put("indicador",indicador);out.put("total",totalReal==null?0:totalReal);out.put("nota",hom?"Homicidios anuales con desglose territorial disponible; 2025 nacional preliminar no se desagrega por distrito.":"Suma de denuncias registradas según los filtros seleccionados.");return out;
  }
 }

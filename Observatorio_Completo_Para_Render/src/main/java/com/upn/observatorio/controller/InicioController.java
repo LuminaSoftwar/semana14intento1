@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class InicioController {
     @GetMapping("/") public String inicio() { return "index"; }
-    @GetMapping("/ciudadano") public String ciudadano() { return "redirect:/dashboard?perfil=ciudadano"; }
+    @GetMapping("/ciudadano") public String ciudadano() { return "redirect:/indicadores?perfil=ciudadano"; }
     @GetMapping("/investigador") public String investigador() { return "redirect:/dashboard?perfil=investigador"; }
     @GetMapping("/dashboard") public String dashboard() { return "dashboard"; }
     @GetMapping("/indicadores") public String indicadores() { return "indicadores"; }

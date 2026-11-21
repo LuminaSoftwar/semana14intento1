@@ -12,15 +12,15 @@ public class MapaDatosApiController {
   if(!Set.of("denuncias","robos","hurtos","extorsion","homicidios").contains(indicador))throw new IllegalArgumentException("Indicador inválido");
   List<Object> args=new ArrayList<>();StringBuilder where=new StringBuilder(" WHERE anio BETWEEN ? AND ? ");args.add(desde);args.add(hasta);
   if(!departamento.equals("Todos")){
-   if(departamento.equalsIgnoreCase("Lima"))where.append(" AND (UPPER(TRIM(departamento)) IN ('LIMA','LIMA METROPOLITANA','REGION LIMA','REGIÓN LIMA'))");
+   if(departamento.equalsIgnoreCase("Lima"))where.append(" AND (UPPER(TRIM(departamento)) IN ('LIMA','LIMA METROPOLITANA','REGION LIMA','REGIÓN LIMA','LIMA PROVINCIAS'))");
    else {where.append(" AND UPPER(TRIM(departamento))=UPPER(TRIM(?))");args.add(departamento);}
   }
   if(!provincia.equals("Todos")){where.append(" AND UPPER(TRIM(provincia))=UPPER(TRIM(?))");args.add(provincia);}
   if(!distrito.equals("Todos")){where.append(" AND UPPER(TRIM(distrito))=UPPER(TRIM(?))");args.add(distrito);}
   String tabla=indicador.equals("homicidios")?"public.obs_homicidios_inei":"public.obs_denuncias_policiales";
-  if(indicador.equals("robos")){where.append(" AND (LOWER(modalidad) LIKE '%robo%' OR LOWER(modalidad) LIKE '%robos%')");}
-  if(indicador.equals("hurtos")){where.append(" AND LOWER(modalidad) LIKE '%hurto%'");}
-  if(indicador.equals("extorsion")){where.append(" AND (LOWER(modalidad) LIKE '%extorsi%' OR LOWER(modalidad) LIKE '%extorci%')");}
+  if(!indicador.equals("homicidios")&&indicador.equals("robos")){where.append(" AND (LOWER(modalidad) LIKE '%robo%' OR LOWER(modalidad) LIKE '%robos%')");}
+  if(!indicador.equals("homicidios")&&indicador.equals("hurtos")){where.append(" AND LOWER(modalidad) LIKE '%hurto%'");}
+  if(!indicador.equals("homicidios")&&indicador.equals("extorsion")){where.append(" AND (LOWER(modalidad) LIKE '%extorsi%' OR LOWER(modalidad) LIKE '%extorci%')");}
   return db.queryForList("SELECT ubigeo,departamento,provincia,distrito,SUM(cantidad) AS cantidad FROM "+tabla+where+" GROUP BY ubigeo,departamento,provincia,distrito ORDER BY cantidad DESC LIMIT 5000",args.toArray());
  }
 }
