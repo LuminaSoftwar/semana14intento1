@@ -19,6 +19,14 @@ public class VisitasApiController {
   Long hoy=db.queryForObject("SELECT count(*) FROM public.obs_visitas WHERE iniciada_en>=date_trunc('day',now())",Long.class);
   Long paginas=db.queryForObject("SELECT count(*) FROM public.obs_eventos_navegacion WHERE tipo_evento IN ('entrada','cambio_pagina')",Long.class);
   var rutas=db.queryForList("SELECT pagina_actual AS path,count(*) AS sesiones,count(*) FILTER(WHERE ultima_actividad_en<=now()-interval '2 minutes') AS inactivas FROM public.obs_visitas GROUP BY pagina_actual ORDER BY sesiones DESC LIMIT 20");
-  return Map.of("activos",activos,"hoy",hoy,"paginas",paginas,"rutas",rutas);
+  var recientes=db.queryForList("SELECT id_visita::text AS sesion, pagina_actual AS ruta, iniciada_en AS inicio, ultima_actividad_en AS ultima_actividad, EXTRACT(EPOCH FROM (ultima_actividad_en-iniciada_en))::bigint AS duracion_segundos, (ultima_actividad_en>now()-interval '2 minutes') AS activa FROM public.obs_visitas ORDER BY ultima_actividad_en DESC LIMIT 100");
+  Long totalDia=db.queryForObject("SELECT count(*) FROM public.obs_visitas WHERE iniciada_en >= date_trunc('day',now())",Long.class);
+  Long acumulado=db.queryForObject("SELECT count(*) FROM public.obs_visitas",Long.class);
+  Long segundos=db.queryForObject("SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (ultima_actividad_en-iniciada_en)))::bigint,0) FROM public.obs_visitas WHERE ultima_actividad_en > iniciada_en",Long.class);
+  var rutasDia=db.queryForList("SELECT pagina_actual AS path, count(*) AS sesiones, count(*) FILTER (WHERE ultima_actividad_en<=now()-interval '2 minutes') AS inactivas FROM public.obs_visitas WHERE iniciada_en >= date_trunc('day',now()) GROUP BY pagina_actual ORDER BY sesiones DESC");
+  Map<String,Object> result=new LinkedHashMap<>();
+  result.put("activos",activos);result.put("hoy",hoy);result.put("paginas",paginas);result.put("rutas",rutas);
+  result.put("acumulado",acumulado);result.put("promedioSegundos",segundos);result.put("sesionesRecientes",recientes);result.put("rutasHoy",rutasDia);result.put("totalDia",totalDia);
+  return result;
  }
 }
