@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: observatorio-seguridad-ciudadana-upn
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    autoDeploy: true
