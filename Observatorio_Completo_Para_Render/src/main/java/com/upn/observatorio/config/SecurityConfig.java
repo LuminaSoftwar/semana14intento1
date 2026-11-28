@@ -15,7 +15,7 @@ public class SecurityConfig {
   return new InMemoryUserDetailsManager(User.withUsername(username).password(encoder.encode(password)).roles("ADMIN").build());
  }
  @Bean SecurityFilterChain filter(HttpSecurity http)throws Exception{
-  http.csrf(c->c.ignoringRequestMatchers("/api/visitas/pulso"));
+  http.csrf(c->c.ignoringRequestMatchers("/api/visitas/pulso", "/api/observabilidad/evento"));
   http.authorizeHttpRequests(a->a.requestMatchers("/admin", "/admin/**").hasRole("ADMIN").anyRequest().permitAll())
     .formLogin(f->f.loginPage("/login").defaultSuccessUrl("/admin",true).permitAll())
     .logout(l->l.logoutSuccessUrl("/").permitAll());
