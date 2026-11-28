@@ -3,19 +3,23 @@ package com.upn.observatorio.controller;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
+import com.upn.observatorio.service.ObservabilidadService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 
 @RestController
 @RequestMapping("/api/consultas")
 public class ConsultasRealesApiController {
- private final JdbcTemplate db;
- public ConsultasRealesApiController(JdbcTemplate db){this.db=db;}
+ private final JdbcTemplate db; private final ObservabilidadService observabilidad;
+ public ConsultasRealesApiController(JdbcTemplate db,ObservabilidadService observabilidad){this.db=db;this.observabilidad=observabilidad;}
  @GetMapping("/datos")
  public Map<String,Object> consultar(@RequestParam(defaultValue="denuncias") String indicador,
   @RequestParam(defaultValue="2022") int desde,@RequestParam(defaultValue="2025") int hasta,
   @RequestParam(defaultValue="Todos") String departamento,@RequestParam(defaultValue="Todos") String provincia,
   @RequestParam(defaultValue="Todos") String distrito,@RequestParam(defaultValue="0") int mes,
-  @RequestParam(defaultValue="anio") String agrupar){
+  @RequestParam(defaultValue="anio") String agrupar,HttpServletRequest request){
+  long started=System.nanoTime(); String rid=request.getHeader("X-Request-ID"); observabilidad.registrar("backend","consulta_iniciada","iniciada",rid,null);
+  try {
   if(desde<2022||hasta>2025||desde>hasta)throw new IllegalArgumentException("Periodo fuera de rango");
   if(mes<0||mes>12)throw new IllegalArgumentException("Mes inválido");
   if(!Set.of("denuncias","robos","hurtos","extorsion","homicidios").contains(indicador))throw new IllegalArgumentException("Indicador inválido");
@@ -38,6 +42,8 @@ public class ConsultasRealesApiController {
   String sql="SELECT "+campo+" AS etiqueta, SUM(cantidad) AS cantidad FROM "+tabla+where+" GROUP BY "+campo+" ORDER BY "+(agrupar.equals("anio")||agrupar.equals("mes")?"etiqueta":"cantidad DESC")+" LIMIT 2000";
   List<Map<String,Object>> filas=db.queryForList(sql,args.toArray());
   Long totalReal=db.queryForObject("SELECT COALESCE(SUM(cantidad),0) FROM "+tabla+where,Long.class,args.toArray());
-  Map<String,Object> out=new LinkedHashMap<>();out.put("filas",filas);out.put("fuente",hom?"INEI/CEIC - homicidios anuales":"SIDPOL - denuncias policiales");out.put("agrupacion",campo);out.put("indicador",indicador);out.put("total",totalReal==null?0:totalReal);out.put("nota",hom?"Homicidios anuales con desglose territorial disponible; 2025 nacional preliminar no se desagrega por distrito.":"Suma de denuncias registradas según los filtros seleccionados.");return out;
+  Map<String,Object> out=new LinkedHashMap<>();out.put("filas",filas);out.put("fuente",hom?"INEI/CEIC - homicidios anuales":"SIDPOL - denuncias policiales");out.put("agrupacion",campo);out.put("indicador",indicador);out.put("total",totalReal==null?0:totalReal);observabilidad.registrar("backend","consulta_exitosa","ok",rid,(System.nanoTime()-started)/1_000_000);
+  out.put("nota",hom?"Homicidios anuales con desglose territorial disponible; 2025 nacional preliminar no se desagrega por distrito.":"Suma de denuncias registradas según los filtros seleccionados.");return out;
+  } catch(IllegalArgumentException ex){observabilidad.registrar("backend","validacion_fallida","rechazada",rid,(System.nanoTime()-started)/1_000_000); throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,ex.getMessage());}
  }
 }
